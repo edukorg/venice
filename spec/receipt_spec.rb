@@ -26,7 +26,9 @@ describe Venice::Receipt do
     end
 
     describe '.verify!' do
-      subject { described_class.verify!('asdf') }
+      subject { described_class.verify!('asdf', options) }
+
+      let(:options) { {} }
 
       before do
         Venice::Client.any_instance.stub(:json_response_from_verifying_data).and_return(response)
@@ -34,6 +36,27 @@ describe Venice::Receipt do
 
       it 'creates the receipt' do
         expect(subject).to be_an_instance_of(Venice::Receipt)
+      end
+
+      describe 'rescuing a VerificationError' do
+        context 'when in production_only mode' do
+          let(:options) do
+            { production_only: true }
+          end
+
+          context 'when a Sandbox receipt is validated against Production API' do
+            let(:retryable_error_response) do
+              { 'status' => 21007 }
+            end
+
+
+            before do
+              Venice::Client.any_instance.stub(:json_response_from_verifying_data).and_return(retryable_error_response, response)
+            end
+
+            it { expect { subject }.to raise_error(Venice::Receipt::VerificationError) }
+          end
+        end
       end
 
       describe 'retrying VerificationError' do
