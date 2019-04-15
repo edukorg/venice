@@ -115,6 +115,8 @@ module Venice
         rescue VerificationError => error
           case error.code
           when 21007
+            raise error if options[:production_only]
+
             client = Client.development
             retry
           when 21008
